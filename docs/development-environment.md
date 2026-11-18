@@ -21,7 +21,7 @@
 
 ## Claude Code skills
 
-- `se-dev-mod`: Mod API whitelist and code search across installed mods (its setup step hasn't been run yet).
+- `se-dev-mod`: Mod API whitelist and code search across installed mods (prepared; re-run its `Prepare.bat` after subscribing to new Workshop mods).
 - `se-dev-game-code`: decompiled game source, for exact signatures and behaviour (ready).
 
 ## Workflow
