@@ -65,3 +65,16 @@ If a target's `workshopId` in `deploy.json` is `null` (for example SLBM's dev ta
 `modinfo.sbmi` without an ID, so the first **Publish** creates the Workshop item. It never reuses another
 target's ID, and it keeps an ID the game wrote itself. After the first publish, copy the new ID from
 `Mod/modinfo.sbmi` into `deploy.json` and commit.
+
+## Dependencies between mods
+
+Space Engineers has no file-based mod dependency, so it is enforced in three places:
+
+1. **`requires` in `deploy.json`** (for example LauncherX requires `missil-misterplace`). `deploy.ps1` warns, and never
+   fails, when the required mod's folder for the same target (dev or final) is not in the Mods folder.
+2. **A runtime check** in the dependent mod's script, where it matters: LauncherX logs and shows a notification at world
+   start if the brain is not in the world's mod list (by Workshop ID 3496380795/3514275550, or by local folder name).
+3. **Workshop "Required items"** (manual, on the Steam page): the dev item must list the dev brain and the final item the
+   final brain. This is what makes players subscribe to both. It cannot be done from the repo.
+
+Always enable both mods in the world. Never mix dev and final.
