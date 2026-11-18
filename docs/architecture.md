@@ -75,7 +75,7 @@ fire. `AquaticLauncher` is stricter, on the server only, every 10 frames:
 
 Every block that has `MissileLauncher` logic (`LargeMissileLauncherIronDome` of IronDomeClassic and `IronDomeX`) gets a
 **Range** slider in its terminal, 100 to 3000 m, default 3000 (the old fixed scan radius, so existing blocks behave as
-before). The classic turret already has the vanilla range slider (`missileTurret.Range`), which `MissileTurret` uses.
+before). **Antenna rule:** if the `AntennaIronDome` mod is loaded (`MissileLauncher.AntennaModLoaded`, checks the block definition), an antenna is **required**: the scan range of the launcher, IronDomeX and the classic turret is the broadcast radius of a working `AntennaIronDome` on the same grid (highest `Radius` wins, clamped to the missile max range of 3000 m, `GetAntennaRadius`); with none, they neither scan nor fire, and the Range slider is hidden. The classic turret's vanilla Range slider is hidden too (`HideTurretRange`); its Control button, idle movement, target locking, target options, focus locked target and view rotation controls are always hidden, antenna mod or not, and the server sets the turret's `Range` to the antenna radius every 100 frames, so idle power follows it. If the antenna mod is not loaded, the slider (turret: vanilla range) is used as before. The classic turret already has the vanilla range slider (`missileTurret.Range`), which `MissileTurret` uses.
 
 - The slider is created once per session in `MissileLauncher.CreateControls` (called from `GuidedMissileSystem.BeforeStart`,
   not on a dedicated server) and removed in `UnloadData`. It is visible only for blocks whose game logic is `MissileLauncher`.

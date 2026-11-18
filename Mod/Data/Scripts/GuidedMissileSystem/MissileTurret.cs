@@ -2,6 +2,7 @@
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.Weapons;
 using Sandbox.ModAPI;
+using Sandbox.ModAPI.Interfaces;
 using SpaceEngineers.Game.ModAPI;
 using System.Collections.Generic;
 using System.Linq;
@@ -124,7 +125,16 @@ namespace Cython.GuidedMissiles
 
         private void TurretTracking()
         {
-            BoundingSphereD turretRange = new BoundingSphereD(missileTurret.GetPosition(), missileTurret.Range);
+            float antennaRadius = MissileLauncher.GetAntennaRadius(missileTurret);
+            float scanRange = MissileLauncher.AntennaModLoaded ? antennaRadius : missileTurret.Range;
+            detectedMissiles.Clear();
+
+            if (scanRange <= 0f)
+            {
+                return;
+            }
+
+            BoundingSphereD turretRange = new BoundingSphereD(missileTurret.GetPosition(), scanRange);
             List<MyEntity> missilesInRange = new List<MyEntity>();
             MyAPIGateway.Missiles.GetAllMissilesInSphere(ref turretRange, missilesInRange);
             detectedMissiles.Clear();
@@ -268,6 +278,14 @@ namespace Cython.GuidedMissiles
                 return;
             }
 
+            // Antenna rule: no working antenna (with the antenna mod loaded) means no firing at all, right away.
+            if (MissileLauncher.AntennaModLoaded && MissileLauncher.GetAntennaRadius(missileTurret) <= 0f)
+            {
+                detectedMissiles.Clear();
+                missileTracked = false;
+                return;
+            }
+
             if (delay >= 4)
             {
                 TurretTracking();
@@ -377,6 +395,18 @@ namespace Cython.GuidedMissiles
         public override void UpdateBeforeSimulation100()
         {
             base.UpdateBeforeSimulation100();
+
+            // With the antenna mod loaded the turret's Range follows the antenna's broadcast radius (server sets it, the
+            // game syncs it).
+            if (missileTurret != null && MyAPIGateway.Session.IsServer && MissileLauncher.AntennaModLoaded)
+            {
+                float radius = MissileLauncher.GetAntennaRadius(missileTurret);
+
+                if (radius > 0f && System.Math.Abs(missileTurret.Range - radius) > 0.5f)
+                {
+                    missileTurret.SetValueFloat("Range", radius);
+                }
+            }
 
             if (missileTurret != null && resourceSink != null)
             {
