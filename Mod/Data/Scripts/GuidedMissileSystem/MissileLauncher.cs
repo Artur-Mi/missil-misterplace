@@ -2,6 +2,7 @@
 using Sandbox.Game.EntityComponents;
 using Sandbox.Game.Weapons;
 using Sandbox.ModAPI;
+using Sandbox.ModAPI.Interfaces.Terminal;
 using System.Collections.Generic;
 using System.Linq;
 using VRage.Game;
@@ -10,6 +11,7 @@ using VRage.Game.Entity;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
 using VRage.ObjectBuilders;
+using VRage.Utils;
 using VRageMath;
 
 namespace Cython.GuidedMissiles
@@ -26,6 +28,15 @@ namespace Cython.GuidedMissiles
         private List<IMyMissile> detectedMissiles = new List<IMyMissile>();
         public static Dictionary<long, IMyMissile> missileLauncherTarget = new Dictionary<long, IMyMissile>();
         private int delay = 0;
+
+        // Scan range, set from the terminal slider. The default is the old fixed range, so blocks saved before the
+        // slider existed behave as before. Saved in the block's mod storage and synced with RangePacket.
+        public const float MaxRange = 3000f;
+        public const float MinRange = 100f;
+        public static readonly System.Guid RangeGuid = new System.Guid("B1D5A2C4-7E3F-4C58-9A61-2F0E8D14C7A9");
+        private float range = MaxRange;
+        private bool rangeReloaded = false;
+        private static IMyTerminalControlSlider rangeSlider;
         private bool missileTracked = false;
         private IMyMissile lastTarget = null;
 
@@ -38,11 +49,112 @@ namespace Cython.GuidedMissiles
             gunObject = gunBlock as IMyGunObject<MyGunBase>;
             resourceSink = gunBlock.ResourceSink as MyResourceSinkComponent;
 
+            LoadRange();
+
             if (missileLauncher != null && !missileLauncher.MarkedForClose)
             {
                 NeedsUpdate |= MyEntityUpdateEnum.EACH_10TH_FRAME;
                 NeedsUpdate |= MyEntityUpdateEnum.EACH_100TH_FRAME;
             }
+        }
+
+        private static float ClampRange(float value)
+        {
+            return MathHelper.Clamp((float)System.Math.Round(value), MinRange, MaxRange);
+        }
+
+        private void LoadRange()
+        {
+            if (Entity == null || Entity.Storage == null || !Entity.Storage.ContainsKey(RangeGuid))
+            {
+                return;
+            }
+
+            float saved;
+
+            if (float.TryParse(Entity.Storage[RangeGuid], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out saved))
+            {
+                range = ClampRange(saved);
+            }
+        }
+
+        public void SetRange(float value)
+        {
+            range = ClampRange(value);
+
+            if (Entity != null)
+            {
+                if (Entity.Storage == null)
+                {
+                    Entity.Storage = new MyModStorageComponent();
+                }
+
+                Entity.Storage[RangeGuid] = range.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        private static MissileLauncher GetLogic(IMyTerminalBlock block)
+        {
+            return block?.GameLogic?.GetAs<MissileLauncher>();
+        }
+
+        // Called on every machine when a range packet arrives (and locally when the slider moves).
+        public static void ApplyRange(long blockId, float value)
+        {
+            IMyEntity entity;
+
+            if (MyAPIGateway.Entities.TryGetEntityById(blockId, out entity))
+            {
+                GetLogic(entity as IMyTerminalBlock)?.SetRange(value);
+            }
+        }
+
+        // Adds the Range slider to the terminal of every small missile launcher; it is shown only for blocks that have
+        // this logic (the Iron Dome launchers: LargeMissileLauncherIronDome and IronDomeX).
+        public static void CreateControls()
+        {
+            if (rangeSlider != null || MyAPIGateway.TerminalControls == null)
+            {
+                return;
+            }
+
+            IMyTerminalControlSlider slider = MyAPIGateway.TerminalControls.CreateControl<IMyTerminalControlSlider, IMySmallMissileLauncher>("MisterIronDome_Range");
+            slider.Title = MyStringId.GetOrCompute("Range");
+            slider.Tooltip = MyStringId.GetOrCompute("Radius within which the Iron Dome looks for enemy missiles. A shorter range uses less power.");
+            slider.SetLimits(MinRange, MaxRange);
+            slider.SupportsMultipleBlocks = true;
+            slider.Visible = block => GetLogic(block) != null;
+            slider.Enabled = block => true;
+            slider.Getter = block =>
+            {
+                MissileLauncher logic = GetLogic(block);
+                return logic != null ? logic.range : MaxRange;
+            };
+            slider.Setter = (block, value) =>
+            {
+                if (GetLogic(block) != null)
+                {
+                    GuidedMissileSystem.SendRange(block.EntityId, value);
+                }
+            };
+            slider.Writer = (block, text) =>
+            {
+                MissileLauncher logic = GetLogic(block);
+                text.Append((int)(logic != null ? logic.range : MaxRange)).Append(" m");
+            };
+
+            MyAPIGateway.TerminalControls.AddControl<IMySmallMissileLauncher>(slider);
+            rangeSlider = slider;
+        }
+
+        public static void RemoveControls()
+        {
+            if (rangeSlider != null && MyAPIGateway.TerminalControls != null)
+            {
+                MyAPIGateway.TerminalControls.RemoveControl<IMySmallMissileLauncher>(rangeSlider);
+            }
+
+            rangeSlider = null;
         }
 
         private bool MissileIsEnemy(IMyMissile missile)
@@ -72,7 +184,7 @@ namespace Cython.GuidedMissiles
 
         private void TurretTracking()
         {
-            BoundingSphereD turretRange = new BoundingSphereD(missileLauncher.GetPosition(), 3000);
+            BoundingSphereD turretRange = new BoundingSphereD(missileLauncher.GetPosition(), range);
             List<MyEntity> missilesInRange = new List<MyEntity>();
             MyAPIGateway.Missiles.GetAllMissilesInSphere(ref turretRange, missilesInRange);
             detectedMissiles.Clear();
@@ -253,8 +365,16 @@ namespace Cython.GuidedMissiles
         {
             base.UpdateBeforeSimulation100();
 
+            if (!rangeReloaded)
+            {
+                // The block's mod storage may not be filled yet in Init, so read the saved range once more here.
+                rangeReloaded = true;
+                LoadRange();
+            }
+
             if (missileLauncher != null && resourceSink != null)
             {
+                launcherIdlePower = 25f * (range / MaxRange);
                 resourceSink.SetMaxRequiredInputByType(ElectricityId, launcherIdlePower);
                 resourceSink.SetRequiredInputFuncByType(ElectricityId, GetCurrentPowerUsage);
                 resourceSink.Update();

@@ -12,7 +12,7 @@ It runs inside the game's Mod API sandbox: C# 7.3, and only whitelisted APIs.
 | `MissileLauncher.cs` | Game logic on `SmallMissileLauncher` / `LargeMissileLauncherIronDome` (IronDomeClassic) and `IronDomeX` (IronDomeX) | Iron Dome launcher: finds enemy missiles and fires interceptors at them. |
 | `MissileTurret.cs` | Game logic on `LargeMissileTurret` / `LargeMissileTurretIronDome` (block defined in IronDomeClassic) | Iron Dome turret. Holds `missilesSubtypeIdWhitelist`, the list of missile ammo it can intercept. |
 | `AquaticLauncher.cs` | Game logic on the SLBM and LauncherX blocks (`LargeMissileLauncherSLBM`, `LauncherX`) | Underwater-only enforcement: switches the block off while its muzzle is not under water (see below). |
-| `Network/` | Packet layer | Based on THDigi's network example (`NetworkLib/Usage.txt`). Syncs guidance between the server and clients. |
+| `Network/` | Packet layer | Based on THDigi's network example (`NetworkLib/Usage.txt`). Syncs guidance between the server and clients. `Packet` carries the hand-held launcher target; `RangePacket` carries an Iron Dome launcher's range (see below). |
 | `APIs/MESApi.cs` | Third-party API | Modular Encounters Systems: lets missiles target NPC grids. |
 | `APIs/WaterModAPI.cs` | Third-party API | Jakaria's Water Mod: underwater detection and splash effects. |
 
@@ -70,6 +70,23 @@ fire. `AquaticLauncher` is stricter, on the server only, every 10 frames:
   new subtype in the `[MyEntityComponentDescriptor]` on the class.
 - The "held off" state is not saved. A block that was saved switched off above water stays off after loading, even once
   submerged, until the player switches it on.
+
+### Iron Dome launcher range slider
+
+Every block that has `MissileLauncher` logic (`LargeMissileLauncherIronDome` of IronDomeClassic and `IronDomeX`) gets a
+**Range** slider in its terminal, 100 to 3000 m, default 3000 (the old fixed scan radius, so existing blocks behave as
+before). The classic turret already has the vanilla range slider (`missileTurret.Range`), which `MissileTurret` uses.
+
+- The slider is created once per session in `MissileLauncher.CreateControls` (called from `GuidedMissileSystem.BeforeStart`,
+  not on a dedicated server) and removed in `UnloadData`. It is visible only for blocks whose game logic is `MissileLauncher`.
+- The value is `MissileLauncher.range`, used as the radius of the missile scan. Idle power scales with it, like the turret
+  (`25 * range / 3000`).
+- Saved in the block's mod storage (`MissileLauncher.RangeGuid`), so it survives save/load.
+- Sync: moving the slider calls `GuidedMissileSystem.SendRange`, which applies it locally and sends a `RangePacket` (a client
+  to the server; the server to everyone). The server relays packets it receives to everyone. The server's value is the one
+  that matters for firing.
+- Terminal label and tooltip are English strings in `CreateControls`. Not done: toolbar actions, a PB property, and a
+  permission check on the packet (the terminal already limits who can edit a block).
 
 ### Iron Dome whitelist diagnostics
 

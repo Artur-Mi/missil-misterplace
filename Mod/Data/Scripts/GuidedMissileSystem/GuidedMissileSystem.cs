@@ -62,6 +62,7 @@ namespace Cython.GuidedMissiles
         }
 
         public Network Net;
+        public static GuidedMissileSystem Instance;
         Packet TrackerPacket;
         private MESApi _MESApi;
         private bool _npcTrackerHooked;
@@ -473,6 +474,8 @@ namespace Cython.GuidedMissiles
             Net.SerializeTest = true;
             TrackerPacket = new Packet();
             Packet.OnReceive += Packet_OnReceive;
+            RangePacket.OnReceive += RangePacket_OnReceive;
+            Instance = this;
             _MESApi = new MESApi();
         }
 
@@ -480,6 +483,11 @@ namespace Cython.GuidedMissiles
         {
             MyAPIGateway.Missiles.OnMissileAdded += OnMissileAdded;
             MyAPIGateway.Missiles.OnMissileRemoved += OnMissileRemoved;
+
+            if (!MyAPIGateway.Utilities.IsDedicated)
+            {
+                MissileLauncher.CreateControls();
+            }
         }
 
         protected override void UnloadData()
@@ -487,6 +495,9 @@ namespace Cython.GuidedMissiles
             Net?.Dispose();
             Net = null;
             Packet.OnReceive -= Packet_OnReceive;
+            RangePacket.OnReceive -= RangePacket_OnReceive;
+            MissileLauncher.RemoveControls();
+            Instance = null;
             MyAPIGateway.Missiles.OnMissileAdded -= OnMissileAdded;
             MyAPIGateway.Missiles.OnMissileRemoved -= OnMissileRemoved;
             if (_MESApi.MESApiReady)
@@ -494,6 +505,38 @@ namespace Cython.GuidedMissiles
                 _MESApi.BehaviorTriggerActivationWatcher(false, GetNPCTarget);
                 _MESApi.UnregisterListener();
             }
+        }
+
+        // Sets the range of an Iron Dome launcher on this machine, then tells the server (or, on the server, everyone else).
+        public static void SendRange(long blockId, float value)
+        {
+            MissileLauncher.ApplyRange(blockId, value);
+
+            GuidedMissileSystem system = Instance;
+
+            if (system == null || system.Net == null)
+            {
+                return;
+            }
+
+            RangePacket packet = new RangePacket();
+            packet.Setup(blockId, value);
+
+            if (MyAPIGateway.Multiplayer.IsServer)
+            {
+                system.Net.SendToEveryone(packet);
+            }
+
+            else
+            {
+                system.Net.SendToServer(packet);
+            }
+        }
+
+        void RangePacket_OnReceive(RangePacket packet, ref PacketInfo packetInfo, ulong senderSteamId)
+        {
+            MissileLauncher.ApplyRange(packet.blockId, packet.range);
+            packetInfo.Relay = RelayMode.ToEveryone;
         }
 
         void Packet_OnReceive(Packet packet, ref PacketInfo packetInfo, ulong senderSteamId)
