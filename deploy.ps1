@@ -41,21 +41,46 @@ $dest = Join-Path $modsDir $t.folder
 function Step([string]$msg) { if ($DryRun) { Write-Host "[dry-run] $msg" } else { Write-Host $msg } }
 
 function Write-ModInfo([string]$dir) {
-    $xml = @"
-<?xml version="1.0"?>
-<MyObjectBuilder_ModInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <SteamIDOwner>$($config.steamIdOwner)</SteamIDOwner>
-  <WorkshopId>0</WorkshopId>
+    $path = Join-Path $dir 'modinfo.sbmi'
+    $hasId = $t.workshopId -and ([int64]$t.workshopId -ne 0)
+
+    if (-not $hasId) {
+        # Target not published yet. Never reuse another target's Workshop ID (a publish would overwrite
+        # that item). If the game already wrote an ID of its own here (after the first publish), keep it.
+        $otherIds = @($config.targets.PSObject.Properties | Where-Object { $_.Name -ne $Target } |
+            ForEach-Object { "$($_.Value.workshopId)" } | Where-Object { $_ -and $_ -ne '0' })
+        if (Test-Path -LiteralPath $path) {
+            $text = Get-Content -LiteralPath $path -Raw
+            $found = [regex]::Matches($text, '<Id>(\d+)</Id>') | ForEach-Object { $_.Groups[1].Value }
+            $foreign = @($found | Where-Object { $otherIds -contains $_ })
+            if ($found.Count -gt 0 -and $foreign.Count -eq 0) {
+                Write-Host "Keeping existing $path (Workshop ID $($found -join ', ')). Record it as workshopId in deploy.json."
+                return
+            }
+        }
+    }
+
+    $idXml = ''
+    if ($hasId) {
+        $idXml = @"
+
   <WorkshopIds>
     <WorkshopId>
       <Id>$($t.workshopId)</Id>
       <ServiceName>Steam</ServiceName>
     </WorkshopId>
   </WorkshopIds>
+"@
+    }
+    $xml = @"
+<?xml version="1.0"?>
+<MyObjectBuilder_ModInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SteamIDOwner>$($config.steamIdOwner)</SteamIDOwner>
+  <WorkshopId>0</WorkshopId>$idXml
 </MyObjectBuilder_ModInfo>
 "@
-    $path = Join-Path $dir 'modinfo.sbmi'
-    Step "Write $path (Workshop ID $($t.workshopId))"
+    $label = if ($hasId) { "Workshop ID $($t.workshopId)" } else { 'not published yet: the first Publish creates the item' }
+    Step "Write $path ($label)"
     if (-not $DryRun) { [IO.File]::WriteAllText($path, $xml, (New-Object Text.UTF8Encoding $false)) }
 }
 
