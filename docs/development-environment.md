@@ -24,7 +24,8 @@
 - `se-dev-mod`: Mod API whitelist and code search across installed mods (its setup step hasn't been run yet).
 - `se-dev-game-code`: decompiled game source, for exact signatures and behaviour (ready).
 
-## Planned
+## Workflow
 
-- An IDE project (`.csproj`) that references `Bin64` for IntelliSense and build-time checks. Phase 3 in
-  `../../docs/modpack-plan.md`.
+No IDE: all editing is done through Claude Code. There is no `.csproj`; the world-load compile in the game is the real
+check, so after a change, reload a test world with the dev mod and read `%APPDATA%\SpaceEngineers\SpaceEngineers.log`
+for compile errors. See Phase 3 in `../../docs/modpack-plan.md`.
