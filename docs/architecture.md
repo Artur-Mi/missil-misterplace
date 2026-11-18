@@ -102,7 +102,7 @@ enemy one (not owned by the block's owner or faction) within 3000 m.
 ## Blocks (none defined here)
 
 This mod ships scripts only. The Iron Dome blocks it drives were moved to the mod
-[IronDomeClassic](../../IronDomeClassic/docs/contents.md), which **requires** this one:
+[IronDomeClassic](../../IronDome/IronDomeClassic/docs/contents.md), which **requires** this one:
 
 - `LargeMissileTurret/LargeMissileTurretIronDome`: weapon `LargeMissileTurretID`
 - `SmallMissileLauncher/LargeMissileLauncherIronDome`: weapon `LargeMissileLauncherID`

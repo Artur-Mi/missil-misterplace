@@ -2,7 +2,7 @@
 
 Guided-missile logic for the MisterWeapon modpack (Space Engineers 1). The block mods (SLBM, LauncherX,
 IronDomeX, IronDomeClassic) depend on it. It defines no blocks of its own: the Iron Dome turret and launcher it
-drives moved to [IronDomeClassic](../IronDomeClassic/README.md).
+drives moved to [IronDomeClassic](../IronDome/IronDomeClassic/README.md).
 
 | Target | Local folder in `%APPDATA%\SpaceEngineers\Mods` | Workshop ID |
 |---|---|---|

@@ -21,6 +21,6 @@ Workspace overview: [../CLAUDE.md](../CLAUDE.md).
   `GuidedMissileSystem.AquaticAmmoSubtypes`; underwater-only blocks are attached in `AquaticLauncher.cs`.
 - Water Mod calls (`Jakaria.API.WaterModAPI`) throw or return false where there is no water: guard them, and test at sea.
 - This mod ships **scripts only**. Block, ammo, blueprint and icon data for the Iron Dome (`LargeMissileTurretIronDome`,
-  `LargeMissileLauncherIronDome`, `IDMissile`) lives in [../IronDomeClassic](../IronDomeClassic/CLAUDE.md); the scripts here
+  `LargeMissileLauncherIronDome`, `IDMissile`) lives in [../IronDome/IronDomeClassic](../IronDome/IronDomeClassic/CLAUDE.md); the scripts here
   attach to it by subtype, so change subtypes in both.
 - Keep the docs current whenever behaviour, layout or the workflow changes.
