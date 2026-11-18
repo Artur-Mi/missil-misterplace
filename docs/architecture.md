@@ -9,7 +9,7 @@ It runs inside the game's Mod API sandbox: C# 7.3, and only whitelisted APIs.
 | File | Type | What it does |
 |---|---|---|
 | `GuidedMissileSystem.cs` | Session component (`BeforeSimulation`) | Tracks every missile in flight and steers it toward its target (`MissileGuider`). Also handles flares, hand-held rocket-launcher lock-on (`RocketLauncherTracker`, with HUD notifications in Portuguese), underwater behaviour (WaterMod) and NPC targets (MES). |
-| `MissileLauncher.cs` | Game logic on `SmallMissileLauncher` / `LargeMissileLauncherIronDome` (block defined in IronDomeClassic) | Iron Dome launcher: finds enemy missiles and fires interceptors at them. |
+| `MissileLauncher.cs` | Game logic on `SmallMissileLauncher` / `LargeMissileLauncherIronDome` (IronDomeClassic) and `IronDomeX` (IronDomeX) | Iron Dome launcher: finds enemy missiles and fires interceptors at them. |
 | `MissileTurret.cs` | Game logic on `LargeMissileTurret` / `LargeMissileTurretIronDome` (block defined in IronDomeClassic) | Iron Dome turret. Holds `missilesSubtypeIdWhitelist`, the list of missile ammo it can intercept. |
 | `AquaticLauncher.cs` | Game logic on the SLBM and LauncherX blocks (`LargeMissileLauncherSLBM`, `LauncherX`) | Underwater-only enforcement: switches the block off while its muzzle is not under water (see below). |
 | `Network/` | Packet layer | Based on THDigi's network example (`NetworkLib/Usage.txt`). Syncs guidance between the server and clients. |
@@ -22,7 +22,8 @@ The guidance logic looks up behaviour by **ammo subtype name**, which is hard-co
 
 | Subtype | Defined in | Behaviour |
 |---|---|---|
-| `IDMissile` | IronDomeClassic (`Ammos.sbc`) | Iron Dome interceptor; targets missiles only |
+| `IDMissile` | IronDomeClassic (`Ammos.sbc`) | **Interceptor** ammo (`GuidedMissileSystem.InterceptorAmmoSubtypes`, test with `IsInterceptorAmmo`): targets missiles only, turns faster |
+| `IronDomeXMissile` | IronDomeX | **Interceptor** ammo, same behaviour; its stats (identical to `IDMissile`) stay in IronDomeX |
 | `AMissile` | missilSLBM-misterplace | **Aquatic** (SLBM) ammo, see below |
 | `LauncherXMissile` | LauncherX | **Aquatic** (SLBM) ammo, see below. Its own stats (damage, speed, fire rate) stay in LauncherX |
 | `Flare` | external | Decoy |
@@ -78,6 +79,12 @@ This mod ships scripts only. The Iron Dome blocks it drives were moved to the mo
 - Magazine `IronDomeMissile`, ammo `IDMissile`, blueprint `IronDomeInterceptMissile`
 
 The scripts here attach by those subtypes. Without IronDomeClassic loaded they find no block and stay idle.
+
+The `IronDomeX` launcher (mod IronDomeX) is registered the same way: its block subtype is in the descriptor on
+`MissileLauncher`, and its ammo `IronDomeXMissile` is in `InterceptorAmmoSubtypes`. To register another Iron Dome style
+launcher, add its block subtype to that descriptor (or the turret's, for a turret) and its ammo subtype to
+`InterceptorAmmoSubtypes`; the ammo's stats stay in the block mod. Interceptor behaviour that is not ammo-based (the
+3000 m scan range, the 25 power draw, the interceptable whitelist) is shared by all registered launchers.
 Worlds saved with the old brain (which still had the blocks) need IronDomeClassic loaded too.
 
 ## Known issues

@@ -14,7 +14,7 @@ using VRageMath;
 
 namespace Cython.GuidedMissiles
 {
-    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_SmallMissileLauncher), false, new string[] { "LargeMissileLauncherIronDome" })]
+    [MyEntityComponentDescriptor(typeof(MyObjectBuilder_SmallMissileLauncher), false, new string[] { "LargeMissileLauncherIronDome", "IronDomeX" })]
     public class MissileLauncher : MyGameLogicComponent
     {
         private IMySmallMissileLauncher missileLauncher;

@@ -34,6 +34,21 @@ namespace Cython.GuidedMissiles
             return subtype != null && AquaticAmmoSubtypes.Contains(subtype);
         }
 
+        // Iron Dome interceptor ammo: steers toward the enemy missile chosen by an Iron Dome launcher or turret
+        // (MissileLauncher / MissileTurret), turns faster, and never targets grids or players. To make another
+        // launcher use the Iron Dome logic, add its ammo subtype here and its block subtype to the
+        // [MyEntityComponentDescriptor] on MissileLauncher (or MissileTurret).
+        public static readonly HashSet<string> InterceptorAmmoSubtypes = new HashSet<string>
+        {
+            "IDMissile",         // IronDomeClassic
+            "IronDomeXMissile",  // IronDomeX
+        };
+
+        public static bool IsInterceptorAmmo(string subtype)
+        {
+            return subtype != null && InterceptorAmmoSubtypes.Contains(subtype);
+        }
+
         // Aquatic ammo that stays at its MissileInitialSpeed while above water instead of accelerating
         // (the original SLBM behaviour). Ammo not listed here accelerates with its own stats once it surfaces.
         public static readonly HashSet<string> HoldInitialSpeedAboveWaterSubtypes = new HashSet<string>
@@ -181,7 +196,7 @@ namespace Cython.GuidedMissiles
                     {
                         targetMissed = true;
 
-                        if (missile.AmmoDefinition.Id.SubtypeName == "IDMissile")
+                        if (IsInterceptorAmmo(missile.AmmoDefinition.Id.SubtypeName))
                         {
                             lock (MissileTurret.missilesOnTarget)
                             {
@@ -248,7 +263,7 @@ namespace Cython.GuidedMissiles
 
                 IMyCubeGrid targetGrid = newTarget as IMyCubeGrid;
 
-                if (targetGrid != null && interceptMissile.AmmoDefinition.Id.SubtypeName != "IDMissile")
+                if (targetGrid != null && !IsInterceptorAmmo(interceptMissile.AmmoDefinition.Id.SubtypeName))
                 {
                     newTarget = targetGrid.GetFatBlocks<IMyThrust>().Count() > 0 ? targetGrid.GetFatBlocks<IMyThrust>().First() : null;
 
@@ -263,7 +278,7 @@ namespace Cython.GuidedMissiles
                 IMyMissile targetMissile = newTarget as IMyMissile;
                 IMyCharacter targetPlayer = newTarget as IMyCharacter;
 
-                if (targetMissile != null && interceptMissile.AmmoDefinition.Id.SubtypeName == "IDMissile")
+                if (targetMissile != null && IsInterceptorAmmo(interceptMissile.AmmoDefinition.Id.SubtypeName))
                 {
                     for (int i = 0; i < MissileTurret.missilesOnTarget.Count(); i++)
                     {
@@ -277,7 +292,7 @@ namespace Cython.GuidedMissiles
                     return newTarget;
                 }
 
-                if (targetPlayer != null && interceptMissile.AmmoDefinition.Id.SubtypeName != "IDMissile")
+                if (targetPlayer != null && !IsInterceptorAmmo(interceptMissile.AmmoDefinition.Id.SubtypeName))
                 {
                     return newTarget;
                 }
@@ -393,7 +408,7 @@ namespace Cython.GuidedMissiles
                 double angle = Math.Acos(Math.Max(Math.Min(Vector3D.Dot(direction, predictionDirection), 1), -1));
                 double turnLimit = 0.02d;
 
-                if (missile.AmmoDefinition.Id.SubtypeName == "IDMissile")
+                if (IsInterceptorAmmo(missile.AmmoDefinition.Id.SubtypeName))
                 {
                     turnLimit = 0.08d;
                 }
@@ -577,7 +592,7 @@ namespace Cython.GuidedMissiles
 
                     IronDomeTest:
 
-                    if (target == null && missile.AmmoDefinition.Id.SubtypeName == "IDMissile")
+                    if (target == null && IsInterceptorAmmo(missile.AmmoDefinition.Id.SubtypeName))
                     {
                         if (MissileLauncher.missileLauncherTarget.ContainsKey(missile.LauncherId))
                         {
@@ -609,7 +624,7 @@ namespace Cython.GuidedMissiles
         private bool IsMissile(IMyMissile missile)
         {
             string subtype = missile.AmmoDefinition.Id.SubtypeName;
-            return subtype == "Missile" || subtype == "PMissile" || subtype == "IDMissile" || IsAquaticAmmo(subtype) || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
+            return subtype == "Missile" || subtype == "PMissile" || IsInterceptorAmmo(subtype) || IsAquaticAmmo(subtype) || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
         }
 
         private void OnMissileRemoved(IMyMissile missile)
