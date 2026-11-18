@@ -20,6 +20,20 @@ namespace Cython.GuidedMissiles
     public class GuidedMissileSystem : MySessionComponentBase
     {
         public const ushort NetworkId = (ushort)(3496380795 % ushort.MaxValue);
+        // Ammo with the SLBM (aquatic) behaviour: leaves the launcher underwater, creeps straight until it
+        // breaks the surface, then accelerates and guides. To give another missile this behaviour, add its
+        // ammo subtype here and to IsMissile; the Iron Dome whitelist (MissileTurret) is separate.
+        public static readonly HashSet<string> AquaticAmmoSubtypes = new HashSet<string>
+        {
+            "AMissile",          // missilSLBM-misterplace
+            "LauncherXMissile",  // LauncherX
+        };
+
+        public static bool IsAquaticAmmo(string subtype)
+        {
+            return subtype != null && AquaticAmmoSubtypes.Contains(subtype);
+        }
+
         public Network Net;
         Packet TrackerPacket;
         private MESApi _MESApi;
@@ -64,7 +78,7 @@ namespace Cython.GuidedMissiles
                 ammo = (MyMissileAmmoDefinition)missile.AmmoDefinition;
                 desiredSpeed = ammo.DesiredSpeed * ammo.DesiredSpeed * 0.99f;
 
-                if (missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+                if (IsAquaticAmmo(missile.AmmoDefinition.Id.SubtypeName))
                 {
                     isAquaticMissile = true;
                     isUnderwater = true;
@@ -556,7 +570,7 @@ namespace Cython.GuidedMissiles
 
             target = MissileGuider.GetTarget(target, missile);
 
-            if (target != null || missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+            if (target != null || IsAquaticAmmo(missile.AmmoDefinition.Id.SubtypeName))
             {
                 missile.Synchronized = true;
                 missileGuiders.Add(missile.EntityId, new MissileGuider(missile, target, launcher));
@@ -566,7 +580,7 @@ namespace Cython.GuidedMissiles
         private bool IsMissile(IMyMissile missile)
         {
             string subtype = missile.AmmoDefinition.Id.SubtypeName;
-            return subtype == "Missile" || subtype == "PMissile" || subtype == "IDMissile" || subtype == "AMissile" || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
+            return subtype == "Missile" || subtype == "PMissile" || subtype == "IDMissile" || IsAquaticAmmo(subtype) || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
         }
 
         private void OnMissileRemoved(IMyMissile missile)

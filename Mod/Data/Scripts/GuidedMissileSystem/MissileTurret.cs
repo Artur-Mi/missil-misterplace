@@ -35,6 +35,7 @@ namespace Cython.GuidedMissiles
             "Missile",
             "PMissike",
             "AMissile",
+            "LauncherXMissile",
             "MissileT2",
             "MissileT3",
             "MissileT4",
@@ -120,7 +121,7 @@ namespace Cython.GuidedMissiles
 
                     if (missilesSubtypeIdWhitelist.Contains(missile?.AmmoDefinition.Id.SubtypeName) && MissileIsEnemy(missile, missileTurret.OwnerId))
                     {
-                        if (missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+                        if (GuidedMissileSystem.IsAquaticAmmo(missile.AmmoDefinition.Id.SubtypeName))
                         {
                             GuidedMissileSystem.MissileGuider missileGuider;
                             GuidedMissileSystem.missileGuiders.TryGetValue(missile.EntityId, out missileGuider);

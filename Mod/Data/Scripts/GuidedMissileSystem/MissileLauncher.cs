@@ -90,7 +90,7 @@ namespace Cython.GuidedMissiles
 
                     if (MissileTurret.missilesSubtypeIdWhitelist.Contains(missile?.AmmoDefinition.Id.SubtypeName) && MissileIsEnemy(missile))
                     {
-                        if (missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+                        if (GuidedMissileSystem.IsAquaticAmmo(missile.AmmoDefinition.Id.SubtypeName))
                         {
                             GuidedMissileSystem.MissileGuider missileGuider;
                             GuidedMissileSystem.missileGuiders.TryGetValue(missile.EntityId, out missileGuider);

@@ -22,10 +22,27 @@ The guidance logic looks up behaviour by **ammo subtype name**, which is hard-co
 | Subtype | Defined in | Behaviour |
 |---|---|---|
 | `IDMissile` | this mod (`Ammos.sbc`) | Iron Dome interceptor; targets missiles only |
-| `AMissile` | missilSLBM-misterplace | Special handling in the guider and the Iron Dome blocks |
+| `AMissile` | missilSLBM-misterplace | **Aquatic** (SLBM) ammo, see below |
+| `LauncherXMissile` | LauncherX | **Aquatic** (SLBM) ammo, see below. Its own stats (damage, speed, fire rate) stay in LauncherX |
 | `Flare` | external | Decoy |
 | `Missile`, `PMissile`, `MissileT2`–`T5` | vanilla / other mods | Guided missiles |
 | `CEC_ArtilleryRocket_BP` | other mod | Interceptable by the Iron Dome turret |
+
+### Aquatic (SLBM) behaviour
+
+Subtypes in `GuidedMissileSystem.AquaticAmmoSubtypes` (test with `GuidedMissileSystem.IsAquaticAmmo`) get:
+
+- A guider even without a target (other missiles only get one when a target is found).
+- While underwater (Water Mod `IsUnderwater`): a straight path at `max(10 - 0.5·t, 0)` m/s, no steering.
+- On leaving the water: a smoke effect and a splash, the clock resets, then normal acceleration to the ammo's
+  `DesiredSpeed` and steering toward the target.
+- Iron Dome blocks ignore the missile while it is still underwater, and can intercept it once it surfaces
+  (both subtypes are in `MissileTurret.missilesSubtypeIdWhitelist`).
+
+Only the behaviour lives here; the ammo's stats stay in its own mod. To give another missile this behaviour, add its
+subtype to `AquaticAmmoSubtypes`, and to the Iron Dome whitelist if the Iron Dome should be able to intercept it.
+Being able to fire underwater only is not part of this: it is the block's `WaterConfig.xml` in the block mod
+(SLBM sets it, LauncherX does not).
 
 When a block mod adds a new missile, the brain must know its subtype. Phase 4 of the modpack plan
 (`../../docs/modpack-plan.md`) is about replacing these hard-coded names with registration.
