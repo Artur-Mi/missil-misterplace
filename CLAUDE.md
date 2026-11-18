@@ -11,7 +11,7 @@ Workspace overview: [../CLAUDE.md](../CLAUDE.md).
 - [../docs/status.md](../docs/status.md) and [../docs/testing.md](../docs/testing.md): workspace status, open items, how to test
 
 ## Rules
-- Edit only inside `Mod/`. Never edit the copies in `%APPDATA%\SpaceEngineers\Mods` directly.
+- Edit only inside `Mod/`. Never edit the copies in `<SE data>/Mods` (Windows: `%APPDATA%\SpaceEngineers\Mods`) directly.
 - Scripts must compile under the game's Mod API: C# 7.3 and whitelisted APIs only. Use the `se-dev-mod` and
   `se-dev-game-code` skills to check APIs.
 - Deploy with `.\deploy.ps1 dev`. Run `.\deploy.ps1 final` only when the user asks for a release; it needs a

@@ -2,6 +2,9 @@
 
 ## Machine
 
+Paths below are the owner's Windows machine; they are examples, nothing in the repos depends on them.
+Other machines and Linux: see [deployment.md](deployment.md#machine-setup) (`SE_DATA_DIR`).
+
 | Thing | Location / version |
 |---|---|
 | Space Engineers | `D:\SteamLibrary\steamapps\common\SpaceEngineers` (`Bin64\` holds the DLLs to reference) |
