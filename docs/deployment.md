@@ -47,7 +47,7 @@ git log --oneline (git describe --tags --abbrev=0 --match "release/*")..HEAD
 - **Never load dev and final in the same world.** Both versions define the same block and ammo subtypes, run
   the same session component, and use the same network channel (`GuidedMissileSystem.NetworkId` is
   derived from the final Workshop ID). The result would be duplicated logic and packets.
-- Block mods (SLBM, LauncherX, IronDomeX) must list the brain as a **Required item** on the Workshop:
+- Block mods (SLBM, LauncherX, IronDomeX, IronDomeClassic) must list the brain as a **Required item** on the Workshop:
   dev block mods require the dev brain, and final block mods require the final brain.
 - Backups in `ModBackups/` are never deleted automatically. Clear old ones out by hand.
 

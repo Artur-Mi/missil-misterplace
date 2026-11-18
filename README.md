@@ -1,7 +1,8 @@
 # missil-misterplace (brain)
 
 Guided-missile logic for the MisterWeapon modpack (Space Engineers 1). The block mods (SLBM, LauncherX,
-IronDomeX) depend on it.
+IronDomeX, IronDomeClassic) depend on it. It defines no blocks of its own: the Iron Dome turret and launcher it
+drives moved to [IronDomeClassic](../IronDomeClassic/README.md).
 
 | Target | Local folder in `%APPDATA%\SpaceEngineers\Mods` | Workshop ID |
 |---|---|---|
@@ -17,7 +18,7 @@ IronDomeX) depend on it.
 Then publish from the game's Mods screen. Never load dev and final in the same world.
 
 ## Layout
-- `Mod/`: everything that ships (Data, Textures, metadata.mod)
+- `Mod/`: everything that ships (scripts under Data/Scripts, metadata.mod; no block, ammo or texture data)
 - `deploy.json` / `deploy.ps1`: deploy targets and script
 - `docs/`: documentation
 
