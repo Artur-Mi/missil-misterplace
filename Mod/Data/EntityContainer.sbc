@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <EntityContainers>
+  
+    <Container>
+      <Id>
+        <TypeId>LargeMissileTurret</TypeId>
+        <SubtypeId>LargeMissileTurretIronDome</SubtypeId>
+      </Id>
+      <DefaultComponents>
+      </DefaultComponents>
+    </Container>
+	
+	<Container>
+      <Id>
+        <TypeId>SmallMissileLauncher</TypeId>
+        <SubtypeId>LargeMissileLauncherIronDome</SubtypeId>
+      </Id>
+      <DefaultComponents>
+      </DefaultComponents>
+    </Container>
+	
+  </EntityContainers>
+</Definitions>

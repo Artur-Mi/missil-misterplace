@@ -1,0 +1,13 @@
+{
+  "steamIdOwner": "76561198300566255",
+  "targets": {
+    "dev": {
+      "folder": "missil-misterplace-dev",
+      "workshopId": 3514275550
+    },
+    "final": {
+      "folder": "missil-misterplace",
+      "workshopId": 3496380795
+    }
+  }
+}
