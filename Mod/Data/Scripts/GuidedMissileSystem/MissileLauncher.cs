@@ -88,6 +88,8 @@ namespace Cython.GuidedMissiles
                 {
                     IMyMissile missile = missileEntity as IMyMissile;
 
+                    MissileTurret.NoteUnlistedMissile(missile);
+
                     if (MissileTurret.missilesSubtypeIdWhitelist.Contains(missile?.AmmoDefinition.Id.SubtypeName) && MissileIsEnemy(missile))
                     {
                         if (GuidedMissileSystem.IsAquaticAmmo(missile.AmmoDefinition.Id.SubtypeName))

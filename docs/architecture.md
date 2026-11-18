@@ -28,6 +28,8 @@ The guidance logic looks up behaviour by **ammo subtype name**, which is hard-co
 | `LauncherXMissile` | LauncherX | **Aquatic** (SLBM) ammo, see below. Its own stats (damage, speed, fire rate) stay in LauncherX |
 | `Flare` | external | Decoy |
 | `Missile`, `PMissile`, `MissileT2`–`T5` | vanilla / other mods | Guided missiles |
+| `Torpedo`, `Torpedo_Heavy`, `Torpedo_Seeking`, `Torpedo_Piercing` | vanilla | Torpedoes. In the Iron Dome whitelist, so the turret and launchers target them like missiles |
+| `MissileHoming` | vanilla | Homing rocket (`Missile200mmHoming`, fired by the advanced hand-held launcher). In the Iron Dome whitelist since 2026-11-17; the basic hand-held launcher and vanilla launchers fire `Missile` |
 | `CEC_ArtilleryRocket_BP` | other mod | Interceptable by the Iron Dome turret |
 
 ### Aquatic (SLBM) behaviour
@@ -68,6 +70,17 @@ fire. `AquaticLauncher` is stricter, on the server only, every 10 frames:
   new subtype in the `[MyEntityComponentDescriptor]` on the class.
 - The "held off" state is not saved. A block that was saved switched off above water stays off after loading, even once
   submerged, until the player switches it on.
+
+### Iron Dome whitelist diagnostics
+
+`MissileTurret.NoteUnlistedMissile` writes `[IronDome] not in whitelist: <subtype>` to the game log, once per ammo subtype,
+for every missile an Iron Dome block sees (within 3000 m) that is not in `missilesSubtypeIdWhitelist`. If an Iron Dome
+ignores some missile, search the newest log for it and add the subtype to the whitelist (own missiles are also logged, since
+the check comes before the enemy filter). In the vanilla game of 2026-11-17 the standard rocket's ammo is `Missile`.
+
+If no such line appears, the block never scanned: a launcher scans only while `IsWorking`, so check that its grid has power
+(this was the cause of the "Iron Dome X ignores rockets" report), that it is on and has ammo, and that the missile is an
+enemy one (not owned by the block's owner or faction) within 3000 m.
 
 ## Blocks (none defined here)
 

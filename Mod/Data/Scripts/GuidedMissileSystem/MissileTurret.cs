@@ -33,6 +33,11 @@ namespace Cython.GuidedMissiles
         public static readonly HashSet<string> missilesSubtypeIdWhitelist = new HashSet<string>()
         {
             "Missile",
+            "Torpedo",          // vanilla torpedoes
+            "Torpedo_Heavy",
+            "Torpedo_Seeking",
+            "Torpedo_Piercing",
+            "MissileHoming",  // vanilla homing rocket (Missile200mmHoming; the advanced hand-held launcher fires it)
             "PMissike",
             "AMissile",
             "LauncherXMissile",
@@ -74,6 +79,22 @@ namespace Cython.GuidedMissiles
                 NeedsUpdate |= MyEntityUpdateEnum.EACH_10TH_FRAME;
                 NeedsUpdate |= MyEntityUpdateEnum.EACH_100TH_FRAME;
             }
+        }
+
+        // Diagnostics: logs once per ammo subtype every missile an Iron Dome sees but does not list, so a renamed or
+        // new missile shows up in the game log as "[IronDome] not in whitelist: <subtype>".
+        private static readonly HashSet<string> unlistedLogged = new HashSet<string>();
+
+        public static void NoteUnlistedMissile(IMyMissile missile)
+        {
+            string subtype = missile?.AmmoDefinition.Id.SubtypeName;
+
+            if (subtype == null || missilesSubtypeIdWhitelist.Contains(subtype) || !unlistedLogged.Add(subtype))
+            {
+                return;
+            }
+
+            VRage.Utils.MyLog.Default.WriteLineAndConsole("[IronDome] not in whitelist: " + subtype);
         }
 
         public static bool MissileIsEnemy(IMyMissile missile, long playerId)
@@ -118,6 +139,8 @@ namespace Cython.GuidedMissiles
                 if (missileEntity != null && !missileEntity.MarkedForClose)
                 {
                     IMyMissile missile = missileEntity as IMyMissile;
+
+                    NoteUnlistedMissile(missile);
 
                     if (missilesSubtypeIdWhitelist.Contains(missile?.AmmoDefinition.Id.SubtypeName) && MissileIsEnemy(missile, missileTurret.OwnerId))
                     {
