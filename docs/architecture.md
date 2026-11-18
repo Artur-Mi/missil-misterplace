@@ -34,8 +34,12 @@ Subtypes in `GuidedMissileSystem.AquaticAmmoSubtypes` (test with `GuidedMissileS
 
 - A guider even without a target (other missiles only get one when a target is found).
 - While underwater (Water Mod `IsUnderwater`): a straight path at `max(10 - 0.5·t, 0)` m/s, no steering.
-- On leaving the water: a smoke effect and a splash, the clock resets, then normal acceleration to the ammo's
-  `DesiredSpeed` and steering toward the target.
+- On leaving the water (only if it was underwater first): a smoke effect and a splash, the clock resets, then normal
+  acceleration from `MissileInitialSpeed` to the ammo's `DesiredSpeed` and steering toward the target. Exception: ammo in
+  `HoldInitialSpeedAboveWaterSubtypes` (`AMissile`, the original SLBM behaviour) stays at its initial speed above water.
+- A missile launched in the air, or in a world with no water, never splashes and just flies as a guided missile with
+  its own stats. (The Water Mod throws when asked for a splash where there is no water; the splash is also wrapped in a
+  try/catch so it can never crash the session.)
 - Iron Dome blocks ignore the missile while it is still underwater, and can intercept it once it surfaces
   (both subtypes are in `MissileTurret.missilesSubtypeIdWhitelist`).
 

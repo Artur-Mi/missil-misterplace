@@ -34,6 +34,18 @@ namespace Cython.GuidedMissiles
             return subtype != null && AquaticAmmoSubtypes.Contains(subtype);
         }
 
+        // Aquatic ammo that stays at its MissileInitialSpeed while above water instead of accelerating
+        // (the original SLBM behaviour). Ammo not listed here accelerates with its own stats once it surfaces.
+        public static readonly HashSet<string> HoldInitialSpeedAboveWaterSubtypes = new HashSet<string>
+        {
+            "AMissile",
+        };
+
+        public static bool HoldsInitialSpeedAboveWater(string subtype)
+        {
+            return subtype != null && HoldInitialSpeedAboveWaterSubtypes.Contains(subtype);
+        }
+
         public Network Net;
         Packet TrackerPacket;
         private MESApi _MESApi;
@@ -50,6 +62,7 @@ namespace Cython.GuidedMissiles
             MyMissileAmmoDefinition ammo;
             public bool isAquaticMissile;
             public bool isUnderwater;
+            private bool hasBeenUnderwater;
             public IMyEntity target;
             public IMyLargeTurretBase missileLauncherTurret;
             public bool targetIsMissile;
@@ -279,22 +292,38 @@ namespace Cython.GuidedMissiles
                     if (Jakaria.API.WaterModAPI.IsUnderwater(missile.GetPosition()))
                     {
                         isUnderwater = true;
+                        hasBeenUnderwater = true;
                     }
 
                     else
                     {
+                        // Only a missile that was really in the water can "surface". One launched in the air
+                        // (or in a world with no water) must not splash: the Water Mod throws there.
+                        bool surfacing = isUnderwater && hasBeenUnderwater;
                         isUnderwater = false;
 
-                        if (effect == null)
+                        if (surfacing && effect == null)
                         {
                             Vector3D worldPos = missile.WorldMatrix.Translation;
                             MyParticlesManager.TryCreateParticleEffect("Smoke_Missile", ref MatrixD.Identity, ref worldPos, missile.Render.GetRenderObjectID(), out effect);
 
-                            Jakaria.API.WaterModAPI.CreateSplash(worldPos, 20f, true);
-                            Jakaria.API.WaterModAPI.CreatePhysicsSplash(worldPos, velocity, 5f, 5);
+                            try
+                            {
+                                Jakaria.API.WaterModAPI.CreateSplash(worldPos, 20f, true);
+                                Jakaria.API.WaterModAPI.CreatePhysicsSplash(worldPos, velocity, 5f, 5);
+                            }
+                            catch (Exception e)
+                            {
+                                // A failing splash must never take the session down.
+                                VRage.Utils.MyLog.Default.WriteLineAndConsole("[GuidedMissiles] Water splash failed: " + e.Message);
+                            }
                         }
 
-                        time = 0; // Zeroing time to make aquatic missiles don't go to full speed when out of water.
+                        // Zeroing time to make aquatic missiles don't go to full speed when out of water.
+                        // Held every tick above water for ammo in HoldInitialSpeedAboveWater (SLBM, as before);
+                        // other aquatic ammo only restarts its own acceleration once, when it surfaces.
+                        if (surfacing || HoldsInitialSpeedAboveWater(missile.AmmoDefinition.Id.SubtypeName))
+                            time = 0;
                     }
                 }
 
