@@ -34,6 +34,8 @@ for compile errors. See Phase 3 in `../../docs/modpack-plan.md`.
 
 Anything that depends on the Water Mod (the aquatic/SLBM missiles, `WaterConfig.xml` underwater-only blocks) needs a
 world with a **planet that has water**. In a world with only asteroids the Water Mod has no water to evaluate: blocks
-with `FunctionalAboveWater=false` keep working, and splash calls fail. Load the dev mods
+with `FunctionalAboveWater=false` keep working, and splash calls fail. (The brain's `AquaticLauncher` does switch the
+SLBM and LauncherX blocks off outside water, but only when the Water Mod is loaded; in space or on a dry planet that means
+they stay off, so test them at sea.) Load the dev mods
 `missil-misterplace-dev` + the block mod's `-dev` folder + `watermod-misterplace` (or the Workshop Water Mod, plus the
 water planet mod you use, for example Teal).

@@ -11,6 +11,7 @@ It runs inside the game's Mod API sandbox: C# 7.3, and only whitelisted APIs.
 | `GuidedMissileSystem.cs` | Session component (`BeforeSimulation`) | Tracks every missile in flight and steers it toward its target (`MissileGuider`). Also handles flares, hand-held rocket-launcher lock-on (`RocketLauncherTracker`, with HUD notifications in Portuguese), underwater behaviour (WaterMod) and NPC targets (MES). |
 | `MissileLauncher.cs` | Game logic on `SmallMissileLauncher` / `LargeMissileLauncherIronDome` | Iron Dome launcher: finds enemy missiles and fires interceptors at them. |
 | `MissileTurret.cs` | Game logic on `LargeMissileTurret` / `LargeMissileTurretIronDome` | Iron Dome turret. Holds `missilesSubtypeIdWhitelist`, the list of missile ammo it can intercept. |
+| `AquaticLauncher.cs` | Game logic on the SLBM and LauncherX blocks (`LargeMissileLauncherSLBM`, `LauncherX`) | Underwater-only enforcement: switches the block off while its muzzle is not under water (see below). |
 | `Network/` | Packet layer | Based on THDigi's network example (`NetworkLib/Usage.txt`). Syncs guidance between the server and clients. |
 | `APIs/MESApi.cs` | Third-party API | Modular Encounters Systems: lets missiles target NPC grids. |
 | `APIs/WaterModAPI.cs` | Third-party API | Jakaria's Water Mod: underwater detection and splash effects. |
@@ -50,6 +51,22 @@ Being able to fire underwater only is not part of this: it is the block's `Water
 
 When a block mod adds a new missile, the brain must know its subtype. Phase 4 of the modpack plan
 (`../../docs/modpack-plan.md`) is about replacing these hard-coded names with registration.
+
+### Underwater-only launchers (`AquaticLauncher`)
+
+The block mods' `WaterConfig.xml` (`FunctionalAboveWater=false`) is kept, but the Water Mod only tests one point of the
+block (its origin cell) and does nothing where there is no water, so in space or on a dry planet the blocks would still
+fire. `AquaticLauncher` is stricter, on the server only, every 10 frames:
+
+- It samples the **muzzle** (front face of the block, forward = -Z, 0.5 m inside) with `WaterModAPI.IsUnderwater`.
+- Muzzle not underwater for 2 checks in a row: it sets `Enabled = false`. If the player switches the block on again it is
+  switched off again. Muzzle underwater for 2 checks: it restores the block to on.
+- With the Water Mod **not** loaded (`WaterModAPI.Registered` false) it does nothing, since it cannot know where the
+  water is. So these blocks work anywhere in a world without the Water Mod.
+- It is attached by block subtype (`LargeMissileLauncherSLBM`, `LauncherX`): adding another underwater-only launcher is a
+  new subtype in the `[MyEntityComponentDescriptor]` on the class.
+- The "held off" state is not saved. A block that was saved switched off above water stays off after loading, even once
+  submerged, until the player switches it on.
 
 ## Blocks defined here
 
