@@ -42,7 +42,7 @@ Subtypes in `GuidedMissileSystem.AquaticAmmoSubtypes` (test with `GuidedMissileS
 Only the behaviour lives here; the ammo's stats stay in its own mod. To give another missile this behaviour, add its
 subtype to `AquaticAmmoSubtypes`, and to the Iron Dome whitelist if the Iron Dome should be able to intercept it.
 Being able to fire underwater only is not part of this: it is the block's `WaterConfig.xml` in the block mod
-(SLBM sets it, LauncherX does not).
+(both SLBM and LauncherX set it).
 
 When a block mod adds a new missile, the brain must know its subtype. Phase 4 of the modpack plan
 (`../../docs/modpack-plan.md`) is about replacing these hard-coded names with registration.
