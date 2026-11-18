@@ -30,6 +30,17 @@ namespace Cython.GuidedMissiles
         private uint delay = 0;
         private bool missileTracked = false;
         private IMyMissile lastTarget = null;
+        public static readonly HashSet<string> missilesSubtypeIdWhitelist = new HashSet<string>()
+        {
+            "Missile",
+            "PMissike",
+            "AMissile",
+            "MissileT2",
+            "MissileT3",
+            "MissileT4",
+            "MissileT5",
+            "CEC_ArtilleryRocket_BP"
+        };
 
         public class MissileTarget
         {
@@ -107,8 +118,19 @@ namespace Cython.GuidedMissiles
                 {
                     IMyMissile missile = missileEntity as IMyMissile;
 
-                    if (MissileIsEnemy(missile, missileTurret.OwnerId))
+                    if (missilesSubtypeIdWhitelist.Contains(missile?.AmmoDefinition.Id.SubtypeName) && MissileIsEnemy(missile, missileTurret.OwnerId))
                     {
+                        if (missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+                        {
+                            GuidedMissileSystem.MissileGuider missileGuider;
+                            GuidedMissileSystem.missileGuiders.TryGetValue(missile.EntityId, out missileGuider);
+
+                            if (missileGuider != null && missileGuider.isUnderwater)
+                            {
+                                continue;
+                            }
+                        }
+
                         detectedMissiles.Add(missile);
                     }
                 }
@@ -160,11 +182,7 @@ namespace Cython.GuidedMissiles
 
         private void TurretFire(IMyMissile missile)
         {
-            if (MyAPIGateway.Session.IsServer)
-            {
-                missileTurret.SetTarget(missile);
-                missileTurret.TrackTarget(missile);
-            }
+            missileTurret.TrackTarget(missile);
 
             lock (missileTurretTarget)
             {

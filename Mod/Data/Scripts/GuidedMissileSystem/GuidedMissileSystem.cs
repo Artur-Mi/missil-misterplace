@@ -1,4 +1,5 @@
-﻿using Sandbox.Definitions;
+﻿using ModularEncountersSystems.API;
+using Sandbox.Definitions;
 using Sandbox.Game;
 using Sandbox.Game.Entities;
 using Sandbox.Game.EntityComponents;
@@ -7,6 +8,7 @@ using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
+using VRage.Game;
 using VRage.Game.Components;
 using VRage.Game.ModAPI;
 using VRage.ModAPI;
@@ -20,15 +22,20 @@ namespace Cython.GuidedMissiles
         public const ushort NetworkId = (ushort)(3496380795 % ushort.MaxValue);
         public Network Net;
         Packet TrackerPacket;
+        private MESApi _MESApi;
+        private bool _npcTrackerHooked;
         private const double RAYCAST_DISTANCE = 2000.0;
         private int delay;
         private uint delay100;
         private bool targetLocked;
         private bool sentToServer;
 
-        private class MissileGuider
+        public class MissileGuider
         {
             public IMyMissile missile;
+            MyMissileAmmoDefinition ammo;
+            public bool isAquaticMissile;
+            public bool isUnderwater;
             public IMyEntity target;
             public IMyLargeTurretBase missileLauncherTurret;
             public bool targetIsMissile;
@@ -41,7 +48,9 @@ namespace Cython.GuidedMissiles
 
             Vector3D direction = Vector3D.Zero;
             Vector3D velocity = Vector3D.Zero;
+            private float speed;
             private double desiredSpeed = 0;
+            public MyParticleEffect effect;
 
             Vector3D lastTargetPosition = Vector3D.Zero;
             private double lastDistanceToTarget = 0;
@@ -52,6 +61,15 @@ namespace Cython.GuidedMissiles
             public MissileGuider(IMyMissile missile, IMyEntity target, IMyLargeTurretBase missileLauncherTurret)
             {
                 this.missile = missile;
+                ammo = (MyMissileAmmoDefinition)missile.AmmoDefinition;
+                desiredSpeed = ammo.DesiredSpeed * ammo.DesiredSpeed * 0.99f;
+
+                if (missile.AmmoDefinition.Id.SubtypeName == "AMissile")
+                {
+                    isAquaticMissile = true;
+                    isUnderwater = true;
+                }
+
                 this.target = target;
                 this.missileLauncherTurret = missileLauncherTurret;
 
@@ -66,9 +84,12 @@ namespace Cython.GuidedMissiles
 
                 position = this.missile.GetPosition();
 
-                lastTargetPosition = target.GetPosition();
+                if (target != null)
+                {
+                    lastTargetPosition = target.GetPosition();
 
-                lastDistanceToTarget = Vector3D.DistanceSquared(position, lastTargetPosition);
+                    lastDistanceToTarget = Vector3D.DistanceSquared(position, lastTargetPosition);
+                }
 
                 UpdateVelocity();
             }
@@ -239,19 +260,69 @@ namespace Cython.GuidedMissiles
 
             public void Update()
             {
-                UpdateDirection();
+                if (isAquaticMissile)
+                {
+                    if (Jakaria.API.WaterModAPI.IsUnderwater(missile.GetPosition()))
+                    {
+                        isUnderwater = true;
+                    }
+
+                    else
+                    {
+                        isUnderwater = false;
+
+                        if (effect == null)
+                        {
+                            Vector3D worldPos = missile.WorldMatrix.Translation;
+                            MyParticlesManager.TryCreateParticleEffect("Smoke_Missile", ref MatrixD.Identity, ref worldPos, missile.Render.GetRenderObjectID(), out effect);
+
+                            Jakaria.API.WaterModAPI.CreateSplash(worldPos, 20f, true);
+                            Jakaria.API.WaterModAPI.CreatePhysicsSplash(worldPos, velocity, 5f, 5);
+                        }
+
+                        time = 0; // Zeroing time to make aquatic missiles don't go to full speed when out of water.
+                    }
+                }
+
+                if (target != null)
+                {
+                    UpdateDirection();
+                }
+
                 UpdateVelocity();
                 UpdateTransform();
+
+                if (time > 60 && speed < 0.5f)
+                {
+                    missile.Close();
+                }
 
                 time += ticktime;
             }
 
             public void UpdateVelocity()
             {
-                MyMissileAmmoDefinition ammo = (MyMissileAmmoDefinition)missile.AmmoDefinition;
-                double speed = Math.Min(ammo.MissileInitialSpeed + ammo.MissileAcceleration * time, ammo.DesiredSpeed);
-                velocity = direction * speed;
-                desiredSpeed = (ammo.DesiredSpeed * ammo.DesiredSpeed) * 0.99f;
+                //MyMissileAmmoDefinition ammo = (MyMissileAmmoDefinition)missile.AmmoDefinition;
+                //double speed = Math.Min(ammo.MissileInitialSpeed + ammo.MissileAcceleration * time, ammo.DesiredSpeed);
+                
+                if (isAquaticMissile && isUnderwater)
+                {
+                    if (isUnderwater)
+                    {
+                        speed = (float)Math.Max(10f - (0.50f * time), 0f);
+                        velocity = direction * speed;
+                    }
+
+                    else
+                    {
+                        velocity = direction * Math.Min(speed + ammo.MissileAcceleration * time, ammo.DesiredSpeed);
+                    }
+                }
+
+                else
+                {
+                    velocity = direction * Math.Min(ammo.MissileInitialSpeed + ammo.MissileAcceleration * time, ammo.DesiredSpeed); ;
+                }
 
                 if (missile.Physics != null)
                     missile.Physics.LinearVelocity = velocity;
@@ -259,6 +330,18 @@ namespace Cython.GuidedMissiles
 
             public void UpdateDirection()
             {
+                if (isAquaticMissile && isUnderwater)
+                {
+                    /*
+                    if (speed < 2f)
+                    {
+
+                    }
+                    */
+
+                    return;
+                }
+
                 Vector3D predictionPosition = GetTargetPrediction();
 
                 Vector3D predictionDirection = predictionPosition - missile.GetPosition();
@@ -321,9 +404,10 @@ namespace Cython.GuidedMissiles
             }
         }
 
-        private Dictionary<long, MissileGuider> missileGuiders = new Dictionary<long, MissileGuider>();
+        public static Dictionary<long, MissileGuider> missileGuiders = new Dictionary<long, MissileGuider>();
         private Dictionary<long, RocketLauncherTracker> rocketLauncherTrackers = new Dictionary<long, RocketLauncherTracker>();
         private static Dictionary<long, Flare> flares = new Dictionary<long, Flare>();
+        private Dictionary<long, IMyEntity> _npcTargets = new Dictionary<long, IMyEntity>();
 
         public override void LoadData()
         {
@@ -331,6 +415,7 @@ namespace Cython.GuidedMissiles
             Net.SerializeTest = true;
             TrackerPacket = new Packet();
             Packet.OnReceive += Packet_OnReceive;
+            _MESApi = new MESApi();
         }
 
         public override void BeforeStart()
@@ -346,6 +431,11 @@ namespace Cython.GuidedMissiles
             Packet.OnReceive -= Packet_OnReceive;
             MyAPIGateway.Missiles.OnMissileAdded -= OnMissileAdded;
             MyAPIGateway.Missiles.OnMissileRemoved -= OnMissileRemoved;
+            if (_MESApi.MESApiReady)
+            {
+                _MESApi.BehaviorTriggerActivationWatcher(false, GetNPCTarget);
+                _MESApi.UnregisterListener();
+            }
         }
 
         void Packet_OnReceive(Packet packet, ref PacketInfo packetInfo, ulong senderSteamId)
@@ -369,16 +459,26 @@ namespace Cython.GuidedMissiles
 
         }
 
+        public void GetNPCTarget(IMyRemoteControl npcRemote, string triggerProfile, string actionProfile, IMyEntity target, Vector3D behaviorWaypoint)
+        {
+            if (npcRemote == null)
+            {
+                return;
+            }
+
+            if (npcRemote.CubeGrid == null)
+            {
+                return;
+            }
+
+            _npcTargets[npcRemote.CubeGrid.EntityId] = target;
+        }
+
         private void OnMissileAdded(IMyMissile missile)
         {
             if (missile.AmmoDefinition.Id.SubtypeName == "Flare")
             {
-                if (flares.ContainsKey(missile.EntityId))
-                {
-                    flares[missile.EntityId] = new Flare(missile);
-                }
-
-                flares.Add(missile.EntityId, new Flare(missile));
+                flares[missile.EntityId] = new Flare(missile);
                 return;
             }
 
@@ -416,6 +516,24 @@ namespace Cython.GuidedMissiles
                     launcher = entity as IMyLargeTurretBase;
                     target = MissileGuider.GetTargetEntity(launcher);
 
+                    if (target == null && _npcTargets.Count > 0)
+                    {
+                        IMySmallMissileLauncher smallMissileLauncher = entity as IMySmallMissileLauncher;
+                        if (smallMissileLauncher != null)
+                        {
+                            _npcTargets.TryGetValue(smallMissileLauncher.CubeGrid.EntityId, out target);
+                            goto IronDomeTest;
+                        }
+
+                        IMySmallMissileLauncherReload smallMissileLauncherReload = entity as IMySmallMissileLauncherReload;
+                        if (smallMissileLauncherReload != null)
+                        {
+                            _npcTargets.TryGetValue(smallMissileLauncherReload.CubeGrid.EntityId, out target);
+                        }
+                    }
+
+                    IronDomeTest:
+
                     if (target == null && missile.AmmoDefinition.Id.SubtypeName == "IDMissile")
                     {
                         if (MissileLauncher.missileLauncherTarget.ContainsKey(missile.LauncherId))
@@ -438,7 +556,7 @@ namespace Cython.GuidedMissiles
 
             target = MissileGuider.GetTarget(target, missile);
 
-            if (target != null)
+            if (target != null || missile.AmmoDefinition.Id.SubtypeName == "AMissile")
             {
                 missile.Synchronized = true;
                 missileGuiders.Add(missile.EntityId, new MissileGuider(missile, target, launcher));
@@ -448,7 +566,7 @@ namespace Cython.GuidedMissiles
         private bool IsMissile(IMyMissile missile)
         {
             string subtype = missile.AmmoDefinition.Id.SubtypeName;
-            return subtype == "Missile" || subtype == "PMissile" || subtype == "IDMissile" || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
+            return subtype == "Missile" || subtype == "PMissile" || subtype == "IDMissile" || subtype == "AMissile" || subtype == "MissileT2" || subtype == "MissileT3" || subtype == "MissileT4" || subtype == "MissileT5";
         }
 
         private void OnMissileRemoved(IMyMissile missile)
@@ -461,8 +579,13 @@ namespace Cython.GuidedMissiles
                 }
             }
 
-            if (missileGuiders.ContainsKey(missile.EntityId))
+            MissileGuider missileGuider;
+
+            if (missileGuiders.TryGetValue(missile.EntityId, out missileGuider))
+            {
+                missileGuider.effect?.Stop(true);
                 missileGuiders.Remove(missile.EntityId);
+            }
         }
 
         public bool CheckOwnership(IMyCubeGrid detectedGrid, long playerId)
@@ -583,6 +706,12 @@ namespace Cython.GuidedMissiles
 
         public override void UpdateBeforeSimulation()
         {
+            if (!_npcTrackerHooked && _MESApi != null && _MESApi.MESApiReady)
+            {
+                _MESApi.BehaviorTriggerActivationWatcher(true, GetNPCTarget);
+                _npcTrackerHooked = true;
+            }
+
             if (!MyAPIGateway.Utilities.IsDedicated)
             {
                 MissileTracking();
