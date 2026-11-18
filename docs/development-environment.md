@@ -15,7 +15,7 @@
 
 - The game compiles `Mod/Data/Scripts/**.cs` at world load. Syntax up to **C# 7.3**, using only types and members
   on the **Mod API whitelist**. A blocked API fails the world load with a compile error in
-  `%APPDATA%\SpaceEngineers\SpaceEngineers.log`.
+  `%APPDATA%\SpaceEngineers\SpaceEngineers_<date>_<time>.log` (newest file).
 - Scripts run on the server and on every client, so check `MyAPIGateway.Session.IsServer` before doing
   authoritative work.
 
@@ -27,5 +27,5 @@
 ## Workflow
 
 No IDE: all editing is done through Claude Code. There is no `.csproj`; the world-load compile in the game is the real
-check, so after a change, reload a test world with the dev mod and read `%APPDATA%\SpaceEngineers\SpaceEngineers.log`
+check, so after a change, reload a test world with the dev mod and read `%APPDATA%\SpaceEngineers\SpaceEngineers_<date>_<time>.log` (newest file)
 for compile errors. See Phase 3 in `../../docs/modpack-plan.md`.
